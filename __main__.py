@@ -194,7 +194,7 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.inline_query.answer(results, cache_time=0)
 
-async def test(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def inline_query_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     inline_message_id = update.chosen_inline_result.inline_message_id
     video_id = update.chosen_inline_result.result_id
     song_info = download_song(video_id)
@@ -232,7 +232,7 @@ def main():
     application.add_handler(CallbackQueryHandler(download_song_button))
     application.add_handler(InlineQueryHandler(inline_query))
 
-    application.add_handler(ChosenInlineResultHandler(test))
+    application.add_handler(ChosenInlineResultHandler(inline_query_edit))
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
