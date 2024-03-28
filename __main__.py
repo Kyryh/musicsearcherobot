@@ -23,6 +23,10 @@ from telegram.ext import (
 
 import urllib3
 from yt_dlp import YoutubeDL, DownloadError
+
+from spotipy import Spotify
+from spotipy.oauth2 import SpotifyClientCredentials
+
 from os import getenv, remove
 import typing
 
@@ -52,6 +56,10 @@ YTDL_OPTIONS = {
     "max_filesize": 50_000_000
 }
 
+spotify_client = Spotify(auth_manager=SpotifyClientCredentials(
+    getenv("SPOTIFY_CLIENT_ID"),
+    getenv("SPOTIFY_CLIENT_SECRET")
+))
 
 
 def first_n_elements(g: typing.Iterator, n: int):
@@ -81,8 +89,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for url in update.effective_message.parse_entities([MessageEntity.URL, MessageEntity.TEXT_LINK]).values():
         if "spotify.link" in url or "open.spotify.com" in url:
-            # TODO
-            pass
+            msg = await update.effective_chat.send_message("Spotify link detected, searching for song on Youtube Music...")
+            if "spotify.link" in url:
+                url = urllib3.request("HEAD", url).url
+            
+            spotify_song = spotify_client.track(url)
+            
+            await send_song_private(update.effective_chat, f"https://music.youtube.com/search?q={spotify_song['name']} {spotify_song['artists'][0]['name']}#songs", context)
+
+            await msg.delete()
         else:
             await send_song_private(update.effective_chat, url, context)
 
@@ -123,7 +138,8 @@ async def send_song_private(chat: Chat, url: str, context: ContextTypes.DEFAULT_
             performer=info["performer"] if info else None,
             title=info["title"] if info else None,
             duration=info["duration"] if info else None,
-            thumbnail=(urllib3.request("GET", info["thumbnail"]).data if info["thumbnail"] else None) if info else None
+            thumbnail=(urllib3.request("GET", info["thumbnail"]).data if info["thumbnail"] else None) if info else None,
+
         )
         
         context.bot_data["cached_songs"][url] = audio_message.audio
@@ -134,6 +150,7 @@ async def send_song_private(chat: Chat, url: str, context: ContextTypes.DEFAULT_
         if msg is not None:
             await msg.delete()
         await chat.send_message(f"ERROR: {e}")
+        raise
 
 async def download_song_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.answer()
@@ -141,7 +158,7 @@ async def download_song_button(update: Update, context: ContextTypes.DEFAULT_TYP
     await send_song_private(update.effective_chat, update.callback_query.data, context)
 
 def download_song(url: str):
-    with YoutubeDL(YTDL_OPTIONS) as ydl:
+    with YoutubeDL(YTDL_OPTIONS| {'playlist_items': "1"}) as ydl:
         info = None
         try:
             info = ydl.extract_info(url)
@@ -218,7 +235,6 @@ async def inline_query_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         song_info = download_song(video_id)
 
-        print(song_info["filename"])
         audio = (await context.bot.send_audio(
             chat_id=OWNER_USER_ID,
             audio=song_info["filename"],
@@ -243,7 +259,16 @@ async def post_init(application: Application):
     application.bot_data["cached_songs"] = application.bot_data.get("cached_songs", {})
 
 def main():
-    application = Application.builder().token(TOKEN).persistence(PicklePersistence("persistence.pickle")).post_init(post_init).concurrent_updates(True).build()
+    application = (
+        Application
+        .builder()
+        .token(TOKEN)
+        .persistence(PicklePersistence("persistence.pickle"))
+        .post_init(post_init)
+        .concurrent_updates(True)
+        .write_timeout(30)
+        .build()
+    )
 
     application.add_handler(CommandHandler("start", start, block=False))
     application.add_handler(MessageHandler(filters.Entity(MessageEntity.URL) | filters.Entity(MessageEntity.TEXT_LINK), handle_links, block=False))
