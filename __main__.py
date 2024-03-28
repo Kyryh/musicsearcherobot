@@ -8,6 +8,7 @@ from telegram import (
     InlineKeyboardMarkup,
     InlineQueryResultAudio,
     InputMediaAudio,
+    LinkPreviewOptions
 )
 from telegram.ext import (
     Application,
@@ -84,7 +85,19 @@ def safely_remove(file: str):
         pass
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.effective_message.reply_text("p")
+    await update.effective_message.reply_text(
+        "Welcome to the bot!\n"
+        "\n"
+        "<b>Features</b>:\n"
+        "- Downloading songs via URL\n"
+        "- Searching and downloading songs based on title and/or artists\n"
+        "- Searching and downloading songs in inline mode\n"
+        "\n"
+        "<b>Made by @Kyryh\n</b>"
+        "<i>Bot source code: https://github.com/Kyryh/musicsearcherobot</i>",
+        link_preview_options=LinkPreviewOptions(True),
+        parse_mode="HTML"
+    )
 
 async def handle_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for url in update.effective_message.parse_entities([MessageEntity.URL, MessageEntity.TEXT_LINK]).values():
