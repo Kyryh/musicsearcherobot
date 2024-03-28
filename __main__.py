@@ -17,7 +17,8 @@ from telegram.ext import (
     filters,
     CallbackQueryHandler,
     InlineQueryHandler,
-    ChosenInlineResultHandler
+    ChosenInlineResultHandler,
+    PicklePersistence
 )
 
 import urllib3
@@ -32,7 +33,6 @@ logging.basicConfig(
 )
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("pyrogram").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ TOKEN = getenv("TOKEN")
 OWNER_USER_ID = getenv("OWNER_USER_ID")
 
 YTDL_OPTIONS = {
-    "outtmpl": "temp.%(ext)s",
+    "outtmpl": "%(id)s.%(ext)s",
     "format": "bestaudio",
     "postprocessors": [
         {
@@ -48,7 +48,7 @@ YTDL_OPTIONS = {
             "preferredcodec": "m4a"
         }
     ],
-    "format_sort": ["filesize:50M"],
+    "format_sort": ["filesize:10M"],
     "max_filesize": 50_000_000
 }
 
@@ -69,6 +69,11 @@ def parse_duration(duration: str):
         mult *= 60
     return seconds
 
+def safely_remove(file: str):
+    try:
+        remove(file)
+    except FileNotFoundError:
+        pass
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.effective_message.reply_text("p")
@@ -79,7 +84,7 @@ async def handle_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # TODO
             pass
         else:
-            await send_song_private(update.effective_chat, url)
+            await send_song_private(update.effective_chat, url, context)
 
 async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.effective_chat.send_message(
@@ -98,25 +103,33 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     )
 
-async def send_song_private(chat: Chat, url: str):
+async def send_song_private(chat: Chat, url: str, context: ContextTypes.DEFAULT_TYPE):
     msg = await chat.send_message(
         "Downloading..."
     )
     try:
-        info = download_song(url)
+        if url in context.bot_data["cached_songs"]:
+            audio = context.bot_data["cached_songs"][url]
+            info = None
+        else:
+            info = download_song(url)
+            audio = info["filename"]
         await msg.delete()
         msg = await chat.send_message(
             "Uploading..."
         )
-        await chat.send_audio(
-            audio="temp.m4a",
-            performer=info["performer"],
-            title=info["title"],
-            duration=info["duration"],
-            thumbnail=urllib3.request("GET", info["thumbnail"]).data if info["thumbnail"] else None
+        audio_message = await chat.send_audio(
+            audio=audio,
+            performer=info["performer"] if info else None,
+            title=info["title"] if info else None,
+            duration=info["duration"] if info else None,
+            thumbnail=(urllib3.request("GET", info["thumbnail"]).data if info["thumbnail"] else None) if info else None
         )
+        
+        context.bot_data["cached_songs"][url] = audio_message.audio
         await msg.delete()
-        remove("temp.m4a")
+        if isinstance(audio, str):
+            safely_remove(audio)
     except Exception as e:
         if msg is not None:
             await msg.delete()
@@ -125,7 +138,7 @@ async def send_song_private(chat: Chat, url: str):
 async def download_song_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.answer()
     await update.effective_message.delete()
-    await send_song_private(update.effective_chat, update.callback_query.data)
+    await send_song_private(update.effective_chat, update.callback_query.data, context)
 
 def download_song(url: str):
     with YoutubeDL(YTDL_OPTIONS) as ydl:
@@ -147,8 +160,10 @@ def download_song(url: str):
         "performer": song_info.get("artist") or song_info.get("uploader"),
         "title": song_info.get("track") or song_info.get("title"),
         "duration": song_info.get("duration"),
-        "thumbnail": song_info["thumbnails"][0]["url"] if "thumbnails" in song_info else song_info.get("thumbnail")
+        "thumbnail": song_info["thumbnails"][0]["url"] if "thumbnails" in song_info else song_info.get("thumbnail"),
+        "filename": ".".join(song_info["requested_downloads"][0]["filename"].split(".")[:-1])+".m4a"
     }
+
 
 def search_songs(query: str, playlist_items: str):
     with YoutubeDL(YTDL_OPTIONS | {'playlist_items': playlist_items, "extract_flat": True}) as ydl:
@@ -191,24 +206,28 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ) for song in search_songs(query, '1,2,3,4,5')
     ]
 
-
-    await update.inline_query.answer(results, cache_time=0)
+    await update.inline_query.answer(results, cache_time=3600)
 
 async def inline_query_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     inline_message_id = update.chosen_inline_result.inline_message_id
     video_id = update.chosen_inline_result.result_id
-    song_info = download_song(video_id)
 
+    if video_id in context.bot_data["cached_songs"]:
+        audio = context.bot_data["cached_songs"][video_id]
+        song_info = None
+    else:
+        song_info = download_song(video_id)
 
-
-    audio = (await context.bot.send_audio(
-        chat_id=OWNER_USER_ID,
-        audio="temp.m4a",
-        performer=song_info["performer"],
-        title=song_info["title"],
-        duration=song_info["duration"],
-        thumbnail=urllib3.request("GET", song_info["thumbnail"]).data if song_info["thumbnail"] else None
-    )).audio
+        print(song_info["filename"])
+        audio = (await context.bot.send_audio(
+            chat_id=OWNER_USER_ID,
+            audio=song_info["filename"],
+            performer=song_info["performer"],
+            title=song_info["title"],
+            duration=song_info["duration"],
+            thumbnail=urllib3.request("GET", song_info["thumbnail"]).data if song_info["thumbnail"] else None
+        )).audio
+        context.bot_data["cached_songs"][video_id] = audio
 
     await context.bot.edit_message_media(
         media=InputMediaAudio(
@@ -216,23 +235,25 @@ async def inline_query_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ),
         inline_message_id=inline_message_id,
     )
+    if song_info:
+        safely_remove(song_info["filename"])
 
-    remove("temp.m4a")
 
-
-
+async def post_init(application: Application):
+    application.bot_data["cached_songs"] = application.bot_data.get("cached_songs", {})
 
 def main():
-    application = Application.builder().token(TOKEN).build()
+    application = Application.builder().token(TOKEN).persistence(PicklePersistence("persistence.pickle")).post_init(post_init).concurrent_updates(True).build()
 
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.Entity(MessageEntity.URL) | filters.Entity(MessageEntity.TEXT_LINK), handle_links))
-    application.add_handler(MessageHandler(filters.TEXT, handle_messages))
+    application.add_handler(CommandHandler("start", start, block=False))
+    application.add_handler(MessageHandler(filters.Entity(MessageEntity.URL) | filters.Entity(MessageEntity.TEXT_LINK), handle_links, block=False))
+    application.add_handler(MessageHandler(filters.TEXT, handle_messages, block=False))
 
-    application.add_handler(CallbackQueryHandler(download_song_button))
-    application.add_handler(InlineQueryHandler(inline_query))
+    application.add_handler(CallbackQueryHandler(download_song_button, block=False))
+    application.add_handler(InlineQueryHandler(inline_query, block=False))
 
     application.add_handler(ChosenInlineResultHandler(inline_query_edit))
+
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
