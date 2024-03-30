@@ -204,7 +204,7 @@ def search_songs(query: str, playlist_items: str):
         return [
             {
                 "id": song["id"],
-                "performer": ''.join(song.get("authors")),
+                "performer": ', '.join(song.get("authors")),
                 "title": song.get("title"),
                 "duration": song.get("video_duration"),
                 "thumbnail": song["thumbnails"][0]["url"] if "thumbnails" in song else song.get("thumbnail")
