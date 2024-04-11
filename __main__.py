@@ -7,6 +7,7 @@ from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     InlineQueryResultAudio,
+    InlineQueryResultCachedAudio,
     InputMediaAudio,
     LinkPreviewOptions
 )
@@ -219,7 +220,13 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not query:
         return
     
+    
     results = [
+        InlineQueryResultCachedAudio(
+            id=song['id'],
+            audio_file_id=context.bot_data["cached_songs"][song['id']].file_id
+        )
+        if song['id'] in context.bot_data["cached_songs"] else
         InlineQueryResultAudio(
             id=song['id'],
             audio_url="https://www.myinstants.com/media/sounds/1sec_silence.mp3",
