@@ -290,12 +290,12 @@ def main():
         .build()
     )
 
-    application.add_handler(CommandHandler("start", start, block=False))
-    application.add_handler(MessageHandler(filters.Entity(MessageEntity.URL) | filters.Entity(MessageEntity.TEXT_LINK), handle_links, block=False))
-    application.add_handler(MessageHandler(filters.TEXT, handle_messages, block=False))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.Entity(MessageEntity.URL) | filters.Entity(MessageEntity.TEXT_LINK), handle_links))
+    application.add_handler(MessageHandler(filters.TEXT, handle_messages))
 
-    application.add_handler(CallbackQueryHandler(download_song_button, block=False))
-    application.add_handler(InlineQueryHandler(inline_query, block=False))
+    application.add_handler(CallbackQueryHandler(download_song_button))
+    application.add_handler(InlineQueryHandler(inline_query))
 
     application.add_handler(ChosenInlineResultHandler(inline_query_edit))
 
