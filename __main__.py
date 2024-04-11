@@ -271,8 +271,7 @@ async def inline_query_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ),
         inline_message_id=inline_message_id,
     )
-    if song_info:
-        safely_remove(song_info["filename"])
+    safely_remove(song_info["filename"])
 
 
 async def post_init(application: Application):
