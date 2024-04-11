@@ -275,7 +275,7 @@ async def inline_query_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def post_init(application: Application):
-    application.bot_data["cached_songs"] = application.bot_data.get("cached_songs", {})
+    application.bot_data.setdefault("cached_songs", {})
 
 def main():
     application = (
