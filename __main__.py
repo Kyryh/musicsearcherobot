@@ -64,6 +64,9 @@ spotify_client = Spotify(auth_manager=SpotifyClientCredentials(
 ))
 
 
+class FilesizeTooLargeException(Exception):
+    pass
+
 def first_n_elements(g: typing.Iterator, n: int):
     for i in range(n):
         yield next(g)
@@ -163,7 +166,7 @@ async def send_song_private(chat: Chat, url: str, context: ContextTypes.DEFAULT_
     except Exception as e:
         if msg is not None:
             await msg.delete()
-        await chat.send_message(f"ERROR: {e}")
+        await chat.send_message(f"ERROR: {repr(e)}")
         raise
 
 async def download_song_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -184,8 +187,8 @@ def download_song(url: str):
             raise Exception("Unsupported website")
         song_info = info["entries"][0] if "entries" in info else info
 
-        if song_info["requested_downloads"][0].get("filesize_approx", 0) > 50_000_000:
-            raise Exception("Filesize too large")
+        if (song_info["requested_downloads"][0].get("filesize_approx", 0) or song_info["requested_downloads"][0].get("filesize", 0)) > 50_000_000:
+            raise FilesizeTooLargeException()
     
     return {
         "performer": song_info.get("artist") or song_info.get("uploader"),
@@ -210,7 +213,7 @@ def search_songs(query: str, playlist_items: str):
                 "duration": song.get("video_duration"),
                 "thumbnail": song["thumbnails"][0]["url"] if "thumbnails" in song else song.get("thumbnail")
             }
-             for song in [item for sublist in zip(info_songs["entries"], info_videos["entries"]) for item in sublist] if song.get("filesize", 0) < 50_000_000
+             for song in [item for sublist in zip(info_songs["entries"], info_videos["entries"]) for item in sublist] if parse_duration(song["video_duration"]) <= 18000
         ]
     
 
@@ -253,8 +256,20 @@ async def inline_query_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         audio = context.bot_data["cached_songs"][video_id]
         song_info = None
     else:
-        song_info = download_song(video_id)
-
+        try:
+            song_info = download_song(video_id)
+        except FilesizeTooLargeException:
+            await context.bot.edit_message_reply_markup(
+                inline_message_id=inline_message_id,
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton("Filesize too large, can't download", callback_data="ignore")
+                        ]
+                    ]
+                )
+            )
+            return
         audio = (await context.bot.send_audio(
             chat_id=OWNER_USER_ID,
             audio=song_info["filename"],
