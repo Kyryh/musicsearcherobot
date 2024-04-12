@@ -229,7 +229,7 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if song['id'] in context.bot_data["cached_songs"] else
         InlineQueryResultAudio(
             id=song['id'],
-            audio_url="https://www.myinstants.com/media/sounds/1sec_silence.mp3",
+            audio_url="https://www.chosic.com/wp-content/uploads/2021/09/Elevator-music(chosic.com).mp3",
             title=song['title'],
             performer=song["performer"],
             audio_duration=parse_duration(song["duration"]),
