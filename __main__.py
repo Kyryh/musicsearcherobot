@@ -213,7 +213,7 @@ def search_songs(query: str, playlist_items: str):
                 "duration": song.get("video_duration"),
                 "thumbnail": song["thumbnails"][0]["url"] if "thumbnails" in song else song.get("thumbnail")
             }
-             for song in [item for sublist in zip(info_songs["entries"], info_videos["entries"]) for item in sublist] if parse_duration(song["video_duration"]) <= 18000
+             for song in [item for sublist in zip(info_songs["entries"], info_videos["entries"]) for item in sublist] if (parse_duration(song["video_duration"]) or 0) <= 18000
         ]
     
 
