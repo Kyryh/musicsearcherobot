@@ -23,6 +23,8 @@ from telegram.ext import (
     PicklePersistence
 )
 
+from downloader import Downloader, DownloaderContext
+
 from os import getenv, remove
 import typing
 
@@ -66,7 +68,7 @@ def safely_remove(file: str):
     except FileNotFoundError:
         pass
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(update: Update, context: DownloaderContext):
     await update.effective_message.reply_text(
         "Welcome to the bot!\n"
         "\n"
@@ -80,11 +82,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 
-async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_messages(update: Update, context: DownloaderContext):
     msg = await update.effective_chat.send_message(
         "Searching songs..."
     )
-    search_results = search_songs(update.effective_message.text, '1,2,3,4,5')
+    search_results = await context.downloader.search_songs(update.effective_message.text, 5)
     await msg.delete()
     await update.effective_chat.send_message(
         "Results:",
@@ -97,7 +99,7 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     )
 
-async def send_song_private(chat: Chat, url: str, context: ContextTypes.DEFAULT_TYPE):
+async def send_song_private(chat: Chat, url: str, context: DownloaderContext):
     msg = await chat.send_message(
         "Downloading..."
     )
@@ -106,7 +108,7 @@ async def send_song_private(chat: Chat, url: str, context: ContextTypes.DEFAULT_
             audio = context.bot_data["cached_songs"][url]
             info = None
         else:
-            info = download_song(url)
+            info = await context.downloader.download_song(url)
             audio = info["filename"]
         await msg.delete()
         msg = await chat.send_message(
@@ -131,7 +133,7 @@ async def send_song_private(chat: Chat, url: str, context: ContextTypes.DEFAULT_
         await chat.send_message(f"ERROR: {repr(e)}")
         raise
 
-async def download_song_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def download_song_button(update: Update, context: DownloaderContext):
     await update.callback_query.answer()
     await update.effective_message.delete()
     await send_song_private(update.effective_chat, update.callback_query.data, context)
@@ -181,7 +183,7 @@ def search_songs(query: str, playlist_items: str):
     return []
     
 
-async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def inline_query(update: Update, context: DownloaderContext):
     query = update.inline_query.query
 
     if not query:
@@ -207,12 +209,12 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     ]
                 ]
             )
-        ) for song in search_songs(query, '1,2,3,4,5')
+        ) for song in await context.downloader.search_songs(query, 5)
     ]
 
     await update.inline_query.answer(results, cache_time=3600)
 
-async def inline_query_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def inline_query_edit(update: Update, context: DownloaderContext):
     inline_message_id = update.chosen_inline_result.inline_message_id
     video_id = update.chosen_inline_result.result_id
 
@@ -221,7 +223,7 @@ async def inline_query_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         song_info = None
     else:
         try:
-            song_info = download_song(video_id)
+            song_info = await context.downloader.download_song(video_id)
         except FilesizeTooLargeException:
             await context.bot.edit_message_reply_markup(
                 inline_message_id=inline_message_id,
@@ -255,6 +257,7 @@ async def inline_query_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def post_init(application: Application):
     application.bot_data.setdefault("cached_songs", {})
+    application.downloader = Downloader()
 
 def main():
     application = (
@@ -265,6 +268,7 @@ def main():
         .post_init(post_init)
         .concurrent_updates(True)
         .write_timeout(30)
+        .context_types(ContextTypes(DownloaderContext))
         .build()
     )
 
