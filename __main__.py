@@ -1,6 +1,7 @@
 import logging
 
 from telegram import (
+    Message,
     Update,
     MessageEntity,
     Chat,
@@ -24,7 +25,8 @@ from telegram.ext import (
 )
 
 import urllib3
-from yt_dlp import YoutubeDL, DownloadError
+from yt_dlp import YoutubeDL
+from multithread_downloader import Downloader, FilesizeTooLargeException
 
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyClientCredentials
@@ -64,8 +66,6 @@ spotify_client = Spotify(auth_manager=SpotifyClientCredentials(
 ))
 
 
-class FilesizeTooLargeException(Exception):
-    pass
 
 def first_n_elements(g: typing.Iterator, n: int):
     for i in range(n):
@@ -136,67 +136,51 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def send_song_private(chat: Chat, url: str, context: ContextTypes.DEFAULT_TYPE):
+
+    if url in context.bot_data["cached_songs"]:
+        audio = context.bot_data["cached_songs"][url]
+        await chat.send_audio(audio)
+        return
+    
+
     msg = await chat.send_message(
         "Downloading..."
     )
-    try:
-        if url in context.bot_data["cached_songs"]:
-            audio = context.bot_data["cached_songs"][url]
-            info = None
-        else:
-            info = download_song(url)
-            audio = info["filename"]
+
+    async def result_handler(info: dict, msg: Message):
+        audio = info["filename"]
         await msg.delete()
         msg = await chat.send_message(
             "Uploading..."
         )
         audio_message = await chat.send_audio(
             audio=audio,
-            performer=info["performer"] if info else None,
-            title=info["title"] if info else None,
-            duration=info["duration"] if info else None,
-            thumbnail=(urllib3.request("GET", info["thumbnail"]).data if info["thumbnail"] else None) if info else None,
-
+            performer=info["performer"],
+            title=info["title"],
+            duration=info["duration"],
+            thumbnail=urllib3.request("GET", info["thumbnail"]).data if info["thumbnail"] else None
         )
-        
+
         context.bot_data["cached_songs"][url] = audio_message.audio
         await msg.delete()
-        if isinstance(audio, str):
-            safely_remove(audio)
-    except Exception as e:
-        if msg is not None:
-            await msg.delete()
-        await chat.send_message(f"ERROR: {repr(e)}")
-        raise
+        
+        safely_remove(audio)
 
+    async def exception_handler(exc: Exception):
+        try:
+            await msg.delete()
+        except Exception:
+            pass
+        await chat.send_message(f"ERROR: {repr(exc)}")
+        #raise exc
+
+    context.application.downloader.download(url, result_handler, exception_handler, msg)
+        
+    
 async def download_song_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.answer()
     await update.effective_message.delete()
     await send_song_private(update.effective_chat, update.callback_query.data, context)
-
-def download_song(url: str):
-    with YoutubeDL(YTDL_OPTIONS| {'playlist_items': "1"}) as ydl:
-        info = None
-        try:
-            info = ydl.extract_info(url)
-        except DownloadError as e:
-            if "Requested format is not available." in e.msg:
-                pass
-            raise e
-        if info is None:
-            raise Exception("Unsupported website")
-        song_info = info["entries"][0] if "entries" in info else info
-
-        if (song_info["requested_downloads"][0].get("filesize_approx", 0) or song_info["requested_downloads"][0].get("filesize", 0)) > 50_000_000:
-            raise FilesizeTooLargeException()
-    
-    return {
-        "performer": song_info.get("artist") or song_info.get("uploader"),
-        "title": song_info.get("track") or song_info.get("title"),
-        "duration": song_info.get("duration"),
-        "thumbnail": song_info["thumbnails"][0]["url"] if "thumbnails" in song_info else song_info.get("thumbnail"),
-        "filename": ".".join(song_info["requested_downloads"][0]["filename"].split(".")[:-1])+".m4a"
-    }
 
 
 def search_songs(query: str, playlist_items: str):
@@ -291,6 +275,8 @@ async def inline_query_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def post_init(application: Application):
     application.bot_data.setdefault("cached_songs", {})
+    application.downloader = Downloader()
+    
 
 def main():
     application = (
