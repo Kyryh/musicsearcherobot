@@ -48,7 +48,9 @@ class Downloader:
         songs = []
         for song in raw_songs:
             video_id = song["musicResponsiveListItemRenderer"]["playlistItemData"]["videoId"]
-            title = song['musicResponsiveListItemRenderer']['flexColumns'][0]['musicResponsiveListItemFlexColumnRenderer']['text']['runs'][0]['text']
+            title = song["musicResponsiveListItemRenderer"]["flexColumns"][0]["musicResponsiveListItemFlexColumnRenderer"]["text"]["runs"][0]["text"]
+            thumbnails = song["musicResponsiveListItemRenderer"]["thumbnail"]["musicThumbnailRenderer"]["thumbnail"]["thumbnails"]
+
             video_info = song['musicResponsiveListItemRenderer']['flexColumns'][1]['musicResponsiveListItemFlexColumnRenderer']['text']['runs']
             authors = views = album = duration = date = None
             if len(video_info) > 3:
@@ -70,7 +72,8 @@ class Downloader:
                 views=views,
                 album=album,
                 duration=duration,
-                date=date
+                date=date,
+                thumbnails=thumbnails
             ))
         return songs
 
@@ -97,3 +100,22 @@ class Song:
     album: str
     duration: str
     date: str
+    thumbnails: list[dict[str, str|int]]
+
+    @property
+    def thumbnail(self) -> str:
+        return self.thumbnails[0]["url"]
+
+    @property
+    def performer(self):
+        return ", ".join(self.authors)
+
+    @property
+    def duration_seconds(self):
+        mult = 1
+        seconds = 0
+        split_duration = self.duration.split(":")[::-1]
+        for s in split_duration:
+            seconds += int(s)*mult
+            mult *= 60
+        return seconds
