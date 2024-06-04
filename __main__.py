@@ -47,21 +47,6 @@ OWNER_USER_ID = getenv("OWNER_USER_ID")
 class FilesizeTooLargeException(Exception):
     pass
 
-def first_n_elements(g: typing.Iterator, n: int):
-    for i in range(n):
-        yield next(g)
-
-def parse_duration(duration: str):
-    if duration is None:
-        return None
-    mult = 1
-    seconds = 0
-    split_duration = duration.split(":")[::-1]
-    for s in split_duration:
-        seconds += int(s)*mult
-        mult *= 60
-    return seconds
-
 def safely_remove(file: str):
     try:
         remove(file)
