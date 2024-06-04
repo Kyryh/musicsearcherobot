@@ -41,7 +41,7 @@ class Downloader:
         data = self.BASE_DATA | {"query": query}
         request_songs = await self.__post(self.SEARCH_URL, data | {"params": self.SECTIONS["songs"]})
         request_videos = await self.__post(self.SEARCH_URL, data | {"params": self.SECTIONS["videos"]})
-        return self.__extract_songs(request_songs) + self.__extract_songs(request_videos)
+        return [item for sublist in zip(self.__extract_songs(request_songs), self.__extract_songs(request_videos)) for item in sublist]
     
     def __extract_songs(self, request: httpx.Response) -> list['Song']:
         raw_songs = request.json()["contents"]["tabbedSearchResultsRenderer"]["tabs"][0]["tabRenderer"]["content"]["sectionListRenderer"]["contents"][1]["musicShelfRenderer"]["contents"]
