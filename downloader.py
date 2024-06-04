@@ -47,6 +47,8 @@ class Downloader:
         raw_songs = request.json()["contents"]["tabbedSearchResultsRenderer"]["tabs"][0]["tabRenderer"]["content"]["sectionListRenderer"]["contents"][1]["musicShelfRenderer"]["contents"]
         songs = []
         for song in raw_songs:
+            if "playlistItemData" not in song["musicResponsiveListItemRenderer"]:
+                continue
             video_id = song["musicResponsiveListItemRenderer"]["playlistItemData"]["videoId"]
             title = song["musicResponsiveListItemRenderer"]["flexColumns"][0]["musicResponsiveListItemFlexColumnRenderer"]["text"]["runs"][0]["text"]
             thumbnails = song["musicResponsiveListItemRenderer"]["thumbnail"]["musicThumbnailRenderer"]["thumbnail"]["thumbnails"]
