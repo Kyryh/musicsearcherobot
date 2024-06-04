@@ -37,7 +37,7 @@ class Downloader:
     async def __post(self, url: str, data: dict) -> httpx.Response:
         return await self.client.post(url, data=str.encode(str(data)))
 
-    async def search_songs(self, query: str, num_items: int):
+    async def search_songs(self, query: str) -> list['Song']:
         data = self.BASE_DATA | {"query": query}
         request_songs = await self.__post(self.SEARCH_URL, data | {"params": self.SECTIONS["songs"]})
         request_videos = await self.__post(self.SEARCH_URL, data | {"params": self.SECTIONS["videos"]})
