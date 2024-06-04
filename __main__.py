@@ -71,14 +71,14 @@ async def handle_messages(update: Update, context: DownloaderContext):
     msg = await update.effective_chat.send_message(
         "Searching songs..."
     )
-    search_results = await context.downloader.search_songs(update.effective_message.text, 5)
+    search_results = await context.downloader.search_songs(update.effective_message.text)
     await msg.delete()
     await update.effective_chat.send_message(
         "Results:",
         reply_markup=InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton(f"{song['title']} by {song['performer']} ({song['duration']})", callback_data=song["id"])
+                    InlineKeyboardButton(f"{song.title} by {song.performer} ({song.duration})", callback_data=song.id)
                 ] for song in search_results
             ] 
         )
@@ -177,16 +177,16 @@ async def inline_query(update: Update, context: DownloaderContext):
     
     results = [
         InlineQueryResultCachedAudio(
-            id=song['id'],
-            audio_file_id=context.bot_data["cached_songs"][song['id']].file_id
+            id=song.id,
+            audio_file_id=context.bot_data["cached_songs"][song.id].file_id
         )
-        if song['id'] in context.bot_data["cached_songs"] else
+        if song.id in context.bot_data["cached_songs"] else
         InlineQueryResultAudio(
-            id=song['id'],
+            id=song.id,
             audio_url="https://www.chosic.com/wp-content/uploads/2021/09/Elevator-music(chosic.com).mp3",
-            title=song['title'],
-            performer=song["performer"],
-            audio_duration=parse_duration(song["duration"]),
+            title=song.title,
+            performer=song.performer,
+            audio_duration=song.duration_seconds,
             reply_markup=InlineKeyboardMarkup(
                 [
                     [
@@ -194,7 +194,7 @@ async def inline_query(update: Update, context: DownloaderContext):
                     ]
                 ]
             )
-        ) for song in await context.downloader.search_songs(query, 5)
+        ) for song in await context.downloader.search_songs(query)
     ]
 
     await update.inline_query.answer(results, cache_time=3600)
