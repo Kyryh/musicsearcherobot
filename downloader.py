@@ -150,6 +150,8 @@ class Song:
     def get_duration_seconds(self):
         if self.duration_seconds:
             return self.duration_seconds
+        if not self.duration:
+            return 0
         mult = 1
         seconds = 0
         split_duration = self.duration.split(":")[::-1]
@@ -161,6 +163,8 @@ class Song:
     def get_duration(self):
         if self.duration:
             return self.duration
+        if not self.duration_seconds:
+            return ""
         return f"{self.duration_seconds//3600}:{(self.duration_seconds%3600)//60}:{self.duration_seconds%60}"
     
     async def download(self, size_limit: float = None) -> bytes:
