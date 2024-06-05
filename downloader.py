@@ -94,13 +94,21 @@ class Downloader:
 
         song = request["videoDetails"]
 
+        downloadUrls = [
+            {
+                "url": format["url"],
+                "size": int(format["contentLength"])/1024**2
+            } for format in request["streamingData"]["adaptiveFormats"] if format["itag"] in (139,140,141)
+        ]
+
         return Song(
             id=song["videoId"],
             title=song["title"],
             authors=[song["author"]],
             views=song["viewCount"],
             duration=int(song["lengthSeconds"]),
-            thumbnails=song["thumbnail"]["thumbnails"]
+            thumbnails=song["thumbnail"]["thumbnails"],
+            downloadUrls=downloadUrls
         )
 
 
@@ -120,6 +128,7 @@ class Song:
     duration_seconds: int = None
     date: str = None
     thumbnails: list[dict[str, str|int]] = None
+    downloadUrls: list[dict[str, str|int]] = None
 
     @property
     def thumbnail(self) -> str:
