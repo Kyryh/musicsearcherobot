@@ -115,7 +115,7 @@ class Downloader:
             downloader=self
         )
 
-    async def download_song(self, id: int):
+    async def download_song(self, id: int) -> tuple['Song', bytes]:
         song = await self.get_song(id)
         return (song, await song.download())
 
