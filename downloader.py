@@ -99,7 +99,7 @@ class Downloader:
                 "url": format["url"],
                 "size": int(format["contentLength"])/1024**2
             } for format in request["streamingData"]["adaptiveFormats"] if format["itag"] in (139,140,141)
-        ]
+        ][::-1]
 
         return Song(
             id=song["videoId"],
