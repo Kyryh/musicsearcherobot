@@ -55,7 +55,10 @@ class Downloader:
         return [item for sublist in zip(self.__extract_songs(request_songs), self.__extract_songs(request_videos)) for item in sublist]
     
     def __extract_songs(self, request: httpx.Response) -> list['Song']:
-        raw_songs = request.json()["contents"]["tabbedSearchResultsRenderer"]["tabs"][0]["tabRenderer"]["content"]["sectionListRenderer"]["contents"][1]["musicShelfRenderer"]["contents"]
+        try:
+            raw_songs = request.json()["contents"]["tabbedSearchResultsRenderer"]["tabs"][0]["tabRenderer"]["content"]["sectionListRenderer"]["contents"][1]["musicShelfRenderer"]["contents"]
+        except KeyError:
+            return []
         songs = []
         for song in raw_songs:
             if "playlistItemData" not in song["musicResponsiveListItemRenderer"]:
