@@ -89,7 +89,7 @@ class Downloader:
         return songs
 
 
-    async def download_song(self, id: str):
+    async def get_song(self, id: str):
         request = (await self.__post("https://music.youtube.com/youtubei/v1/player?prettyPrint=false", self.BASE_DATA_ANDROID | {"videoId": id})).json()
 
         song = request["videoDetails"]
@@ -148,9 +148,7 @@ class Song:
 
 async def main():
     downloader = Downloader()
-    #pprint.pprint(await downloader.search_songs("test"))
-    e = await downloader.download_song("P0LtGJnCOV4")
-    print(await downloader.download_song("QbH90DqobJw"))
+    print(await downloader.get_song("QbH90DqobJw"))
 
 if __name__ == "__main__":
     import asyncio
