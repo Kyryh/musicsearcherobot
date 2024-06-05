@@ -21,11 +21,20 @@ class Downloader:
         'videos': 'EgWKAQIQAWoKEAoQAxAEEAkQBQ==',
     }
 
-    BASE_DATA = {
+    BASE_DATA_SEARCH = {
         "context": {
             "client": {
                 "clientName": "WEB_REMIX",
                 "clientVersion": "1.20240529.01.00"
+            }
+        },
+    }
+
+    BASE_DATA_ANDROID = {
+        "context": {
+            "client": {
+                "clientName": "ANDROID_MUSIC",
+                "clientVersion": "6.42.52"
             }
         },
     }
@@ -38,7 +47,7 @@ class Downloader:
         return await self.client.post(url, data=str.encode(str(data)))
 
     async def search_songs(self, query: str) -> list['Song']:
-        data = self.BASE_DATA | {"query": query}
+        data = self.BASE_DATA_SEARCH | {"query": query}
         request_songs = await self.__post(self.SEARCH_URL, data | {"params": self.SECTIONS["songs"]})
         request_videos = await self.__post(self.SEARCH_URL, data | {"params": self.SECTIONS["videos"]})
         return [item for sublist in zip(self.__extract_songs(request_songs), self.__extract_songs(request_videos)) for item in sublist]
@@ -80,12 +89,8 @@ class Downloader:
         return songs
 
 
-    @contextmanager
     async def download_song(self, id: str):
-        try:
-            yield None
-        finally:
-            pass
+        return await self.__post("https://music.youtube.com/youtubei/v1/player?prettyPrint=false", self.BASE_DATA_ANDROID | {"videoId": id})
 
 
 class DownloaderContext(CallbackContext[ExtBot, dict, dict, dict]):
@@ -102,7 +107,7 @@ class Song:
     album: str
     duration: str
     date: str
-    thumbnails: list[dict[str, str|int]]
+    thumbnails: list[dict[str]]
 
     @property
     def thumbnail(self) -> str:
@@ -121,3 +126,14 @@ class Song:
             seconds += int(s)*mult
             mult *= 60
         return seconds
+
+async def main():
+    downloader = Downloader()
+    #pprint.pprint(await downloader.search_songs("test"))
+    e = await downloader.download_song("P0LtGJnCOV4")
+    print(e)
+
+if __name__ == "__main__":
+    import asyncio
+    import pprint
+    asyncio.run(main())
