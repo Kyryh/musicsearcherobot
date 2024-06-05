@@ -89,7 +89,7 @@ class Downloader:
         return songs
 
 
-    async def get_song(self, id: str):
+    async def get_song(self, id: str) -> 'Song':
         request = (await self.__post("https://music.youtube.com/youtubei/v1/player?prettyPrint=false", self.BASE_DATA_ANDROID | {"videoId": id})).json()
 
         song = request["videoDetails"]
