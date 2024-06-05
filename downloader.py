@@ -42,6 +42,8 @@ class Downloader:
     def __init__(self):
         self.client = httpx.AsyncClient()
     
+    async def get(self, url: str, headers: dict[str, str]) -> httpx.Response:
+        return await self.client.get(url, headers=headers)
 
     async def __post(self, url: str, data: dict) -> httpx.Response:
         return await self.client.post(url, data=str.encode(str(data)))
@@ -84,7 +86,8 @@ class Downloader:
                 album=album,
                 duration=duration,
                 date=date,
-                thumbnails=thumbnails
+                thumbnails=thumbnails,
+                downloader=self
             ))
         return songs
 
@@ -108,8 +111,13 @@ class Downloader:
             views=song["viewCount"],
             duration=int(song["lengthSeconds"]),
             thumbnails=song["thumbnail"]["thumbnails"],
-            downloadUrls=downloadUrls
+            downloadUrls=downloadUrls,
+            downloader=self
         )
+
+    async def download_song(self, id: int):
+        song = await self.get_song(id)
+        return (song, await song.download())
 
 
 class DownloaderContext(CallbackContext[ExtBot, dict, dict, dict]):
@@ -129,6 +137,7 @@ class Song:
     date: str = None
     thumbnails: list[dict[str, str|int]] = None
     downloadUrls: list[dict[str, str|int]] = None
+    downloader: Downloader = None
 
     @property
     def thumbnail(self) -> str:
@@ -153,11 +162,16 @@ class Song:
         if self.duration:
             return self.duration
         return f"{self.__duration_seconds//3600}:{(self.__duration_seconds%3600)//60}:{self.__duration_seconds%60}"
+    
+    async def download(self, size_limit: float = None) -> bytes:
+        for downloadUrl in self.downloadUrls:
+            if size_limit is None or downloadUrl["size"] < size_limit:
+                return (await self.downloader.get(downloadUrl["url"], {"Range": "bytes=0-"})).read()
+        return None
 
 
 async def main():
-    downloader = Downloader()
-    print(await downloader.get_song("QbH90DqobJw"))
+    pass
 
 if __name__ == "__main__":
     import asyncio
