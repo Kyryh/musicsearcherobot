@@ -109,7 +109,7 @@ class Downloader:
             title=song["title"],
             authors=[song["author"]],
             views=song["viewCount"],
-            duration=int(song["lengthSeconds"]),
+            duration_seconds=int(song["lengthSeconds"]),
             thumbnails=song["thumbnail"]["thumbnails"],
             downloadUrls=downloadUrls,
             downloader=self
@@ -161,7 +161,7 @@ class Song:
     def get_duration(self):
         if self.duration:
             return self.duration
-        return f"{self.__duration_seconds//3600}:{(self.__duration_seconds%3600)//60}:{self.__duration_seconds%60}"
+        return f"{self.duration_seconds//3600}:{(self.duration_seconds%3600)//60}:{self.duration_seconds%60}"
     
     async def download(self, size_limit: float = None) -> bytes:
         for downloadUrl in self.downloadUrls:
