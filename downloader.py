@@ -119,7 +119,7 @@ class Song:
     duration: str = None
     duration_seconds: int = None
     date: str = None
-    thumbnails: list[dict[str]] = None
+    thumbnails: list[dict[str, str|int]] = None
 
     @property
     def thumbnail(self) -> str:
