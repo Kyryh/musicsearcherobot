@@ -103,12 +103,12 @@ class Song:
     id: str
     title: str
     authors: list[str]
-    views: str
-    album: str
-    __duration: str = None
-    __duration_seconds: int = None
-    date: str
-    thumbnails: list[dict[str]]
+    views: str = None
+    album: str = None
+    duration: str = None
+    duration_seconds: int = None
+    date: str = None
+    thumbnails: list[dict[str]] = None
 
     @property
     def thumbnail(self) -> str:
@@ -118,22 +118,20 @@ class Song:
     def performer(self):
         return ", ".join(self.authors)
 
-    @property
-    def duration_seconds(self):
-        if self.__duration_seconds:
-            return self.__duration_seconds
+    def get_duration_seconds(self):
+        if self.duration_seconds:
+            return self.duration_seconds
         mult = 1
         seconds = 0
-        split_duration = self.__duration.split(":")[::-1]
+        split_duration = self.duration.split(":")[::-1]
         for s in split_duration:
             seconds += int(s)*mult
             mult *= 60
         return seconds
 
-    @property
-    def duration(self):
-        if self.__duration:
-            return self.__duration
+    def get_duration(self):
+        if self.duration:
+            return self.duration
         return f"{self.__duration_seconds//3600}:{(self.__duration_seconds%3600)//60}:{self.__duration_seconds%60}"
 
 

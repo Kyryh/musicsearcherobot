@@ -78,7 +78,7 @@ async def handle_messages(update: Update, context: DownloaderContext):
         reply_markup=InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton(f"{song.title} by {song.performer} ({song.duration})", callback_data=song.id)
+                    InlineKeyboardButton(f"{song.title} by {song.performer} ({song.get_duration()})", callback_data=song.id)
                 ] for song in search_results
             ] 
         )
@@ -186,7 +186,7 @@ async def inline_query(update: Update, context: DownloaderContext):
             audio_url="https://www.chosic.com/wp-content/uploads/2021/09/Elevator-music(chosic.com).mp3",
             title=song.title,
             performer=song.performer,
-            audio_duration=song.duration_seconds,
+            audio_duration=song.get_duration_seconds(),
             reply_markup=InlineKeyboardMarkup(
                 [
                     [
