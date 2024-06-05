@@ -91,27 +91,26 @@ async def send_song_private(chat: Chat, url: str, context: DownloaderContext):
     try:
         if url in context.bot_data["cached_songs"]:
             audio = context.bot_data["cached_songs"][url]
-            info = None
-        else:
-            info = await context.downloader.download_song(url)
-            audio = info["filename"]
+            await chat.send_audio(
+                audio=audio
+            )
+            await msg.delete()
+            return
+        info, audio = await context.downloader.download_song(url, 50)
         await msg.delete()
         msg = await chat.send_message(
             "Uploading..."
         )
         audio_message = await chat.send_audio(
             audio=audio,
-            performer=info["performer"] if info else None,
-            title=info["title"] if info else None,
-            duration=info["duration"] if info else None,
-            #thumbnail=(urllib3.request("GET", info["thumbnail"]).data if info["thumbnail"] else None) if info else None,
-
+            performer=info.performer,
+            title=info.title,
+            duration=info.get_duration_seconds(),
+            thumbnail=await context.downloader.get(info.thumbnail)
         )
         
         context.bot_data["cached_songs"][url] = audio_message.audio
         await msg.delete()
-        if isinstance(audio, str):
-            safely_remove(audio)
     except Exception as e:
         if msg is not None:
             await msg.delete()
@@ -123,50 +122,6 @@ async def download_song_button(update: Update, context: DownloaderContext):
     await update.effective_message.delete()
     await send_song_private(update.effective_chat, update.callback_query.data, context)
 
-def download_song(url: str):
-    """with YoutubeDL(YTDL_OPTIONS| {'playlist_items': "1"}) as ydl:
-        info = None
-        try:
-            info = ydl.extract_info(url)
-        except DownloadError as e:
-            if "Requested format is not available." in e.msg:
-                pass
-            raise e
-        if info is None:
-            raise Exception("Unsupported website")
-        song_info = info["entries"][0] if "entries" in info else info
-
-        if (song_info["requested_downloads"][0].get("filesize_approx", 0) or song_info["requested_downloads"][0].get("filesize", 0)) > 50_000_000:
-            raise FilesizeTooLargeException()
-    
-    return {
-        "performer": song_info.get("artist") or song_info.get("uploader"),
-        "title": song_info.get("track") or song_info.get("title"),
-        "duration": song_info.get("duration"),
-        "thumbnail": song_info["thumbnails"][0]["url"] if "thumbnails" in song_info else song_info.get("thumbnail"),
-        "filename": ".".join(song_info["requested_downloads"][0]["filename"].split(".")[:-1])+".m4a"
-    }"""
-    return {}
-
-
-def search_songs(query: str, playlist_items: str):
-    """with YoutubeDL(YTDL_OPTIONS | {'playlist_items': playlist_items, "extract_flat": True}) as ydl:
-
-        info_songs = ydl.extract_info(f"https://music.youtube.com/search?q={query}#songs", download = False)
-        info_videos = ydl.extract_info(f"https://music.youtube.com/search?q={query}#videos", download = False)
-
-        return [
-            {
-                "id": song["id"],
-                "performer": ', '.join(song.get("authors")),
-                "title": song.get("title"),
-                "duration": song.get("video_duration"),
-                "thumbnail": song["thumbnails"][0]["url"] if "thumbnails" in song else song.get("thumbnail")
-            }
-             for song in [item for sublist in zip(info_songs["entries"], info_videos["entries"]) for item in sublist] if (parse_duration(song["video_duration"]) or 0) <= 18000
-        ]"""
-    return []
-    
 
 async def inline_query(update: Update, context: DownloaderContext):
     query = update.inline_query.query
@@ -201,15 +156,15 @@ async def inline_query(update: Update, context: DownloaderContext):
 
 async def inline_query_edit(update: Update, context: DownloaderContext):
     inline_message_id = update.chosen_inline_result.inline_message_id
+    if not inline_message_id:
+        return
     video_id = update.chosen_inline_result.result_id
 
     if video_id in context.bot_data["cached_songs"]:
         audio = context.bot_data["cached_songs"][video_id]
-        song_info = None
     else:
-        try:
-            song_info = await context.downloader.download_song(video_id)
-        except FilesizeTooLargeException:
+        info, song = await context.downloader.download_song(video_id, 50)
+        if song is None:
             await context.bot.edit_message_reply_markup(
                 inline_message_id=inline_message_id,
                 reply_markup=InlineKeyboardMarkup(
@@ -223,11 +178,11 @@ async def inline_query_edit(update: Update, context: DownloaderContext):
             return
         audio = (await context.bot.send_audio(
             chat_id=OWNER_USER_ID,
-            audio=song_info["filename"],
-            performer=song_info["performer"],
-            title=song_info["title"],
-            duration=song_info["duration"],
-            #thumbnail=urllib3.request("GET", song_info["thumbnail"]).data if song_info["thumbnail"] else None
+            audio=song,
+            performer=info.performer,
+            title=info.title,
+            duration=info.get_duration_seconds(),
+            thumbnail=await context.downloader.get(info.thumbnail)
         )).audio
         context.bot_data["cached_songs"][video_id] = audio
 
@@ -237,7 +192,6 @@ async def inline_query_edit(update: Update, context: DownloaderContext):
         ),
         inline_message_id=inline_message_id,
     )
-    safely_remove(song_info["filename"])
 
 
 async def post_init(application: Application):

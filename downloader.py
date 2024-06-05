@@ -173,7 +173,17 @@ class Song:
     async def download(self, size_limit: float = None) -> bytes:
         for downloadUrl in self.downloadUrls:
             if size_limit is None or downloadUrl["size"] < size_limit:
-                return (await self.downloader.get(downloadUrl["url"], {"Range": "bytes=0-"})).read()
+                # could probably do all this with a stream
+                # oh well
+                chunk = b" "
+                song = b""
+                i = 0
+                while chunk:
+                    request = await self.downloader.get(downloadUrl["url"], headers={"Range": f"bytes={10024824*i}-{10024824*(i+1)-1}"})
+                    chunk = request.read()
+                    song += chunk
+                    i += 1
+                return song
         return None
 
 
