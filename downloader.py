@@ -105,7 +105,8 @@ class Song:
     authors: list[str]
     views: str
     album: str
-    duration: str
+    __duration: str = None
+    __duration_seconds: int = None
     date: str
     thumbnails: list[dict[str]]
 
@@ -119,13 +120,22 @@ class Song:
 
     @property
     def duration_seconds(self):
+        if self.__duration_seconds:
+            return self.__duration_seconds
         mult = 1
         seconds = 0
-        split_duration = self.duration.split(":")[::-1]
+        split_duration = self.__duration.split(":")[::-1]
         for s in split_duration:
             seconds += int(s)*mult
             mult *= 60
         return seconds
+
+    @property
+    def duration(self):
+        if self.__duration:
+            return self.__duration
+        return f"{self.__duration_seconds//3600}:{(self.__duration_seconds%3600)//60}:{self.__duration_seconds%60}"
+
 
 async def main():
     downloader = Downloader()
