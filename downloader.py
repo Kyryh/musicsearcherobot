@@ -42,7 +42,7 @@ class Downloader:
     def __init__(self):
         self.client = httpx.AsyncClient()
     
-    async def get(self, url: str, headers: dict[str, str]) -> httpx.Response:
+    async def get(self, url: str, headers: dict[str, str] = None) -> httpx.Response:
         return await self.client.get(url, headers=headers)
 
     async def __post(self, url: str, data: dict) -> httpx.Response:
