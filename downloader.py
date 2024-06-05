@@ -118,9 +118,9 @@ class Downloader:
             downloader=self
         )
 
-    async def download_song(self, id: int) -> tuple['Song', bytes]:
+    async def download_song(self, id: int, size_limit: float = None) -> tuple['Song', bytes]:
         song = await self.get_song(id)
-        return (song, await song.download())
+        return (song, await song.download(size_limit))
 
 
 class DownloaderContext(CallbackContext[ExtBot, dict, dict, dict]):
