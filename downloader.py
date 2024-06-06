@@ -56,7 +56,7 @@ class Downloader:
     
     def __extract_songs(self, request: httpx.Response) -> list['Song']:
         try:
-            raw_songs = request.json()["contents"]["tabbedSearchResultsRenderer"]["tabs"][0]["tabRenderer"]["content"]["sectionListRenderer"]["contents"][1]["musicShelfRenderer"]["contents"]
+            raw_songs = request.json()["contents"]["tabbedSearchResultsRenderer"]["tabs"][0]["tabRenderer"]["content"]["sectionListRenderer"]["contents"][-1]["musicShelfRenderer"]["contents"]
         except KeyError:
             return []
         songs = []
