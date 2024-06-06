@@ -109,7 +109,7 @@ async def send_song_private(chat: Chat, url: str, context: DownloaderContext):
             thumbnail=await context.downloader.get(info.thumbnail)
         )
         
-        context.bot_data["cached_songs"][url] = audio_message.audio
+        context.bot_data["cached_songs"][url] = audio_message.audio.file_id
         await msg.delete()
     except Exception as e:
         if msg is not None:
@@ -133,7 +133,7 @@ async def inline_query(update: Update, context: DownloaderContext):
     results = [
         InlineQueryResultCachedAudio(
             id=song.id,
-            audio_file_id=context.bot_data["cached_songs"][song.id].file_id
+            audio_file_id=context.bot_data["cached_songs"][song.id]
         )
         if song.id in context.bot_data["cached_songs"] else
         InlineQueryResultAudio(
@@ -184,7 +184,7 @@ async def inline_query_edit(update: Update, context: DownloaderContext):
             duration=info.get_duration_seconds(),
             thumbnail=await context.downloader.get(info.thumbnail)
         )).audio
-        context.bot_data["cached_songs"][video_id] = audio
+        context.bot_data["cached_songs"][video_id] = audio.file_id
 
     await context.bot.edit_message_media(
         media=InputMediaAudio(
