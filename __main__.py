@@ -2,7 +2,6 @@ import logging
 
 from telegram import (
     Update,
-    MessageEntity,
     Chat,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -26,7 +25,6 @@ from telegram.ext import (
 from downloader import Downloader, DownloaderContext
 
 from os import getenv, remove
-import typing
 
 __import__("dotenv").load_dotenv()
 
