@@ -119,7 +119,15 @@ async def send_song_private(chat: Chat, url: str, context: DownloaderContext):
 
 async def download_song_button(update: Update, context: DownloaderContext):
     await update.callback_query.answer()
-    await update.effective_message.delete()
+    if (update.callback_query.data == "ignore"):
+        return
+    
+    await update.effective_message.edit_reply_markup(
+        InlineKeyboardMarkup([
+            button if button[0].callback_data != update.callback_query.data else (InlineKeyboardButton(f"✅ {button[0].text}", callback_data="ignore"),)
+            for button in update.effective_message.reply_markup.inline_keyboard
+        ])
+    )
     await send_song_private(update.effective_chat, update.callback_query.data, context)
 
 
