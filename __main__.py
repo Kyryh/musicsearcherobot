@@ -29,7 +29,12 @@ from os import getenv, remove
 __import__("dotenv").load_dotenv()
 
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("logs.log")
+    ]
 )
 
 logging.getLogger("httpx").setLevel(logging.WARNING)

@@ -1,11 +1,14 @@
 import httpx
 from dataclasses import dataclass
 
+import logging
 
 from telegram.ext import (
     CallbackContext,
     ExtBot,
 )
+
+logger = logging.getLogger("Downloader")
 
 class Downloader:
 
@@ -189,7 +192,7 @@ class Song:
                     song += request.read()
                     i += 1
                 return song
-        print(self.id, self.downloadUrls[-1]["size"])
+        logger.info(self.id, self.downloadUrls[-1]["size"])
         return None
 
 
