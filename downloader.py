@@ -171,17 +171,23 @@ class Song:
         return f"{self.duration_seconds//3600}:{(self.duration_seconds%3600)//60}:{self.duration_seconds%60}"
     
     async def download(self, size_limit: float = None) -> bytes:
+        if not self.downloadUrls:
+            self.downloadUrls = (await self.downloader.get_song(self.id)).downloadUrls
         for downloadUrl in self.downloadUrls:
             if size_limit is None or downloadUrl["size"] < size_limit:
+                url = downloadUrl["url"]
                 # could probably do all this with a stream
                 # oh well
-                chunk = b" "
                 song = b""
                 i = 0
-                while chunk:
-                    request = await self.downloader.get(downloadUrl["url"], headers={"Range": f"bytes={10024824*i}-{10024824*(i+1)-1}"})
-                    chunk = request.read()
-                    song += chunk
+                while True:
+                    request = await self.downloader.get(url, headers={"Range": f"bytes={10024824*i}-{10024824*(i+1)-1}"})
+                    if request.status_code == 416:
+                        break
+                    if request.status_code == 302:
+                        url = request.next_request.url
+                        continue
+                    song += request.read()
                     i += 1
                 return song
         return None
