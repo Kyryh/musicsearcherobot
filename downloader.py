@@ -181,7 +181,7 @@ class Song:
                 song = b""
                 i = 0
                 while True:
-                    request = await self.downloader.get(url, headers={"Range": f"bytes={10024824*i}-{10024824*(i+1)-1}"})
+                    request = await self.downloader.get(url, headers={"Range": f"bytes={8388608*i}-{8388608*(i+1)-1}"})
                     if request.status_code == 416:
                         break
                     if request.status_code == 302:
