@@ -98,6 +98,10 @@ async def send_song_private(chat: Chat, url: str, context: DownloaderContext):
             return
         info, audio = await context.downloader.download_song(url, 10)
         await msg.delete()
+        if audio is None:
+            await chat.send_message(
+                "Filesize too large, can't download"
+            )
         msg = await chat.send_message(
             "Uploading..."
         )
