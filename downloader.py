@@ -190,6 +190,7 @@ class Song:
                     song += request.read()
                     i += 1
                 return song
+        print(self.id, self.downloadUrls[-1]["size"])
         return None
 
 
