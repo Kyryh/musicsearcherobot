@@ -71,7 +71,7 @@ async def handle_messages(update: Update, context: DownloaderContext):
     msg = await update.effective_chat.send_message(
         "Searching songs..."
     )
-    search_results = await context.downloader.search_songs(update.effective_message.text)
+    search_results = [song for song in await context.downloader.search_songs(update.effective_message.text) if song.get_duration_seconds() < 1800]
     await msg.delete()
     await update.effective_chat.send_message(
         "Results:",
@@ -96,7 +96,7 @@ async def send_song_private(chat: Chat, url: str, context: DownloaderContext):
             )
             await msg.delete()
             return
-        info, audio = await context.downloader.download_song(url, 50)
+        info, audio = await context.downloader.download_song(url, 10)
         await msg.delete()
         msg = await chat.send_message(
             "Uploading..."
@@ -149,7 +149,7 @@ async def inline_query(update: Update, context: DownloaderContext):
                     ]
                 ]
             )
-        ) for song in await context.downloader.search_songs(query)
+        ) for song in await context.downloader.search_songs(query) if song.get_duration_seconds() < 1800
     ]
 
     await update.inline_query.answer(results, cache_time=3600)
@@ -163,7 +163,7 @@ async def inline_query_edit(update: Update, context: DownloaderContext):
     if video_id in context.bot_data["cached_songs"]:
         audio = context.bot_data["cached_songs"][video_id]
     else:
-        info, song = await context.downloader.download_song(video_id, 50)
+        info, song = await context.downloader.download_song(video_id, 10)
         if song is None:
             await context.bot.edit_message_reply_markup(
                 inline_message_id=inline_message_id,
