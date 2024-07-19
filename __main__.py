@@ -45,17 +45,6 @@ TOKEN = getenv("TOKEN")
 OWNER_USER_ID = getenv("OWNER_USER_ID")
 
 
-
-
-class FilesizeTooLargeException(Exception):
-    pass
-
-def safely_remove(file: str):
-    try:
-        remove(file)
-    except FileNotFoundError:
-        pass
-
 async def start(update: Update, context: DownloaderContext):
     await update.effective_message.reply_text(
         "Welcome to the bot!\n"
