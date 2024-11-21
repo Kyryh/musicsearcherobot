@@ -1,5 +1,4 @@
-from typing import Any, Optional
-import httpx
+from typing import Any
 from downloader import Downloader, Song
 
 
