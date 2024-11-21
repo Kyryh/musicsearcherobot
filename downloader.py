@@ -128,7 +128,7 @@ class Downloader:
 class DownloaderContext(CallbackContext[ExtBot, dict, dict, dict]):
     @property
     def downloader(self) -> Downloader:
-        return self.application.downloader
+        return self.application.bot_data["downloader"]
 
 @dataclass
 class Song:

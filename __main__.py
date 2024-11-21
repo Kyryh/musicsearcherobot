@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from telegram import (
     Update,
@@ -198,9 +199,9 @@ async def inline_query_edit(update: Update, context: DownloaderContext):
     )
 
 
-async def post_init(application: Application):
+async def post_init(application: Application[Any, Any, Any, Any, dict]):
     application.bot_data.setdefault("cached_songs", {})
-    application.downloader = Downloader()
+    application.bot_data["downloader"] = Downloader()
 
 def main():
     application = (
