@@ -23,7 +23,8 @@ from telegram.ext import (
     PicklePersistence
 )
 
-from downloader import Downloader, DownloaderContext
+from downloader import DownloaderContext
+from youtube_downloader import YoutubeDownloader
 
 from os import getenv, remove
 
@@ -199,9 +200,9 @@ async def inline_query_edit(update: Update, context: DownloaderContext):
     )
 
 
-async def post_init(application: Application[Any, Any, Any, Any, dict]):
+async def post_init(application: Application[Any, Any, Any, Any, dict, Any]):
     application.bot_data.setdefault("cached_songs", {})
-    application.bot_data["downloader"] = Downloader()
+    application.bot_data["downloader"] = YoutubeDownloader()
 
 def main():
     application = (
